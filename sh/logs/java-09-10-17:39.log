@@ -1,0 +1,9 @@
+[H[J
+请选择需要的操作:
+
+    1) JAVA系统发布(不含config) 
+    2) JAVA系统发布(含config) 
+    3) 退出系统 
+
+请选择：
+./start.sh: line 40: 退出系统: command not found

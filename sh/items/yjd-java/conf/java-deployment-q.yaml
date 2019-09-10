@@ -1,0 +1,811 @@
+# 包含核心应用及服务
+# p-cloud-discovery
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: p-cloud-discovery
+  labels:
+    app: p-cloud-discovery
+  namespace: default
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  selector:
+    matchLabels:
+      app: p-cloud-discovery
+  template:
+    metadata:
+      labels:
+        app: p-cloud-discovery
+    spec:
+      containers:
+        - name: p-cloud-discovery
+          image: yjd-registry.cn-shanghai.cr.aliyuncs.com/java/java-run:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: COMMAND0
+              value: ' '
+            - name: COMMAND1
+              value: 'cp /opt/code/java-jar/p-cloud-discovery-0.0.1-SNAPSHOT.jar /root/p-cloud-discovery-0.0.1-SNAPSHOT.jar'
+            - name: COMMAND2
+              value: 'nohup java -jar -Xms1024m -Xmx2048m  /root/p-cloud-discovery-0.0.1-SNAPSHOT.jar &'
+          # resources:
+            # requests:
+              # memory: "2Gi"
+              # cpu: "500m"
+            # limits:
+              # memory: "2Gi"
+              # cpu: "1000m"
+          ports:
+            - containerPort: 7001
+          workingDir: /root/
+          volumeMounts:
+            - name: nfs-volume
+              mountPath: "/opt/code"
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      imagePullSecrets:
+      - name: aliyun-hub
+      volumes:
+      - name: nfs-volume
+        nfs:
+          path: /
+          server: 10.100.20.146
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: p-cloud-discovery
+spec:
+  ports:
+    - port: 7001
+      protocol: TCP
+      targetPort: 7001
+  selector:
+    app: p-cloud-discovery
+  type: ClusterIP
+---
+# p-config-service
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: p-config-service
+  labels:
+    app: p-config-service
+  namespace: default
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  selector:
+    matchLabels:
+      app: p-config-service
+  template:
+    metadata:
+      labels:
+        app: p-config-service
+    spec:
+      containers:
+        - name: p-config-service
+          image: yjd-registry.cn-shanghai.cr.aliyuncs.com/java/java-run:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: COMMAND0
+              value: ' '
+            - name: COMMAND1
+              value: 'cp /opt/code/java-jar/p-config-service-0.0.1-SNAPSHOT.jar /root/p-config-service-0.0.1-SNAPSHOT.jar'
+            - name: COMMAND2
+              value: 'nohup java -jar -Xms1024m -Xmx2048m  /root/p-config-service-0.0.1-SNAPSHOT.jar &'
+          # resources:
+            # requests:
+              # memory: "2Gi"
+              # cpu: "500m"
+            # limits:
+              # memory: "2Gi"
+              # cpu: "1000m"
+          ports:
+            - containerPort: 9121
+          workingDir: /root/
+          volumeMounts:
+            - name: java-p-config-service-conf-volume
+              mountPath: "/data"
+            - name: nfs-volume
+              mountPath: "/opt/code"
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      imagePullSecrets:
+      - name: aliyun-hub
+      volumes:
+      - name: java-p-config-service-conf-volume
+        secret:
+          secretName: java-p-config-service-conf
+      - name: nfs-volume
+        nfs:
+          path: /
+          server: 10.100.20.146
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: p-config-service
+spec:
+  ports:
+    - port: 9121
+      protocol: TCP
+      targetPort: 9121
+  selector:
+    app: p-config-service
+  type: ClusterIP
+---
+# p-dts-service
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: p-dts-service
+  labels:
+    app: p-dts-service
+  namespace: default
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  selector:
+    matchLabels:
+      app: p-dts-service
+  template:
+    metadata:
+      labels:
+        app: p-dts-service
+    spec:
+      containers:
+        - name: p-dts-service
+          image: yjd-registry.cn-shanghai.cr.aliyuncs.com/java/java-run:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: COMMAND0
+              value: ' '
+            - name: COMMAND1
+              value: 'cp /opt/code/java-jar/p-dts-service-0.0.1-SNAPSHOT.jar /root/p-dts-service-0.0.1-SNAPSHOT.jar'
+            - name: COMMAND2
+              value: 'nohup java -jar -Xms1024m -Xmx4096m  /root/p-dts-service-0.0.1-SNAPSHOT.jar &'
+            - name: TAG
+              value: v20190822 
+          # resources:
+            # requests:
+              # memory: "4Gi"
+              # cpu: "500m"
+            # limits:
+              # memory: "4Gi"
+              # cpu: "1200m"
+          ports:
+            - containerPort: 9101
+          workingDir: "/root/"
+          volumeMounts:
+            - name: nfs-volume
+              mountPath: "/opt/code"
+            - name: java-log
+              mountPath: /var/ms/logs/p-dts-service/
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      imagePullSecrets:
+      - name: aliyun-hub
+      volumes:
+      - name: nfs-volume
+        nfs:
+          path: /
+          server: 10.100.20.146
+      - name: java-log
+        hostPath:
+          path: /var/lib/docker/logs/java/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: p-dts-service
+spec:
+  ports:
+    - name: tcp-9101-9101
+      port: 9101
+      protocol: TCP
+      targetPort: 9101
+  selector:
+    app: p-dts-service
+  type: ClusterIP
+---
+# p-msg-service
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: p-msg-service
+  labels:
+    app: p-msg-service
+  namespace: default
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  selector:
+    matchLabels:
+      app: p-msg-service
+  template:
+    metadata:
+      labels:
+        app: p-msg-service
+    spec:
+      containers:
+        - name: p-msg-service
+          image: yjd-registry.cn-shanghai.cr.aliyuncs.com/java/java-run:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: COMMAND0
+              value: ' '
+            - name: COMMAND1
+              value: 'cp /opt/code/java-jar/p-msg-service-0.0.1-SNAPSHOT.jar /root/p-msg-service-0.0.1-SNAPSHOT.jar'
+            - name: COMMAND2
+              value: 'nohup java -jar -Xms1024m -Xmx4096m  /root/p-msg-service-0.0.1-SNAPSHOT.jar &'
+            - name: TAG
+              value: v20190822 
+          # resources:
+            # requests:
+              # memory: "4Gi"
+              # cpu: "500m"
+            # limits:
+              # memory: "4Gi"
+              # cpu: "1200m"
+          ports:
+            - containerPort: 9051
+          workingDir: "/root/"
+          volumeMounts:
+            - name: nfs-volume
+              mountPath: "/opt/code"
+            - name: java-log
+              mountPath: /var/ms/logs/p-msg-service/
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      imagePullSecrets:
+      - name: aliyun-hub
+      volumes:
+      - name: nfs-volume
+        nfs:
+          path: /
+          server: 10.100.20.146
+      - name: java-log
+        hostPath:
+          path: /var/lib/docker/logs/java/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: p-msg-service
+spec:
+  ports:
+    - port: 9051
+      protocol: TCP
+      targetPort: 9051
+  selector:
+    app: p-msg-service
+  type: ClusterIP
+---
+# p-account-service
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: p-account-service
+  labels:
+    app: p-account-service
+  namespace: default
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  selector:
+    matchLabels:
+      app: p-account-service
+  template:
+    metadata:
+      labels:
+        app: p-account-service
+    spec:
+      containers:
+        - name: p-account-service
+          image: yjd-registry.cn-shanghai.cr.aliyuncs.com/java/java-run:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: COMMAND0
+              value: ' '
+            - name: COMMAND1
+              value: 'cp /opt/code/java-jar/p-account-service-0.0.1-SNAPSHOT.jar /root/p-account-service-0.0.1-SNAPSHOT.jar'
+            - name: COMMAND2
+              value: 'nohup java -jar -Xms1024m -Xmx6144m  /root/p-account-service-0.0.1-SNAPSHOT.jar &'
+            - name: TAG
+              value: v20190822 
+          # resources:
+            # requests:
+              # memory: "6Gi"
+              # cpu: "500m"
+            # limits:
+              # memory: "7Gi"
+              # cpu: "1200m"
+          ports:
+            - containerPort: 9011
+          workingDir: "/root/"
+          volumeMounts:
+            - name: nfs-volume
+              mountPath: "/opt/code"
+            - name: java-log
+              mountPath: /var/ms/logs/p-account-service/
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      imagePullSecrets:
+      - name: aliyun-hub
+      volumes:
+      - name: nfs-volume
+        nfs:
+          path: /
+          server: 10.100.20.146
+      - name: java-log
+        hostPath:
+          path: /var/lib/docker/logs/java/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: p-account-service
+spec:
+  ports:
+    - port: 9011
+      protocol: TCP
+      targetPort: 9011
+  selector:
+    app: p-account-service
+  type: ClusterIP
+---
+# p-borrow-service
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: p-borrow-service
+  labels:
+    app: p-borrow-service
+  namespace: default
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  selector:
+    matchLabels:
+      app: p-borrow-service
+  template:
+    metadata:
+      labels:
+        app: p-borrow-service
+    spec:
+      containers:
+        - name: p-borrow-service
+          image: yjd-registry.cn-shanghai.cr.aliyuncs.com/java/java-run:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: COMMAND0
+              value: ' '
+            - name: COMMAND1
+              value: 'cp /opt/code/java-jar/p-borrow-service-0.0.1-SNAPSHOT.jar /root/p-borrow-service-0.0.1-SNAPSHOT.jar'
+            - name: COMMAND2
+              value: 'nohup java -jar -Xms1024m -Xmx4096m  /root/p-borrow-service-0.0.1-SNAPSHOT.jar &'
+            - name: TAG
+              value: v20190822 
+          # resources:
+            # requests:
+              # memory: "4Gi"
+              # cpu: "500m"
+            # limits:
+              # memory: "4Gi"
+              # cpu: "1200m"
+          ports:
+            - containerPort: 9021
+          workingDir: "/root/"
+          volumeMounts:
+            - name: nfs-volume
+              mountPath: "/opt/code"
+            - name: java-log
+              mountPath: /var/ms/logs/p-borrow-service/
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      imagePullSecrets:
+      - name: aliyun-hub
+      volumes:
+      - name: nfs-volume
+        nfs:
+          path: /
+          server: 10.100.20.146
+      - name: java-log
+        hostPath:
+          path: /var/lib/docker/logs/java/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: p-borrow-service
+spec:
+  ports:
+    - port: 9021
+      protocol: TCP
+      targetPort: 9021
+  selector:
+    app: p-borrow-service
+  type: ClusterIP
+---
+# p-invest-service
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: p-invest-service
+  labels:
+    app: p-invest-service
+  namespace: default
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  selector:
+    matchLabels:
+      app: p-invest-service
+  template:
+    metadata:
+      labels:
+        app: p-invest-service
+    spec:
+      containers:
+        - name: p-invest-service
+          image: yjd-registry.cn-shanghai.cr.aliyuncs.com/java/java-run:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: COMMAND0
+              value: ' '
+            - name: COMMAND1
+              value: 'cp /opt/code/java-jar/p-invest-service-0.0.1-SNAPSHOT.jar /root/p-invest-service-0.0.1-SNAPSHOT.jar'
+            - name: COMMAND2
+              value: 'nohup java -jar -Xms1024m -Xmx4096m  /root/p-invest-service-0.0.1-SNAPSHOT.jar &'
+            - name: TAG
+              value: v20190822 
+          # resources:
+            # requests:
+              # memory: "4Gi"
+              # cpu: "500m"
+            # limits:
+              # memory: "4Gi"
+              # cpu: "1200m"
+          ports:
+            - containerPort: 9031
+          workingDir: "/root/"
+          volumeMounts:
+            - name: nfs-volume
+              mountPath: "/opt/code"
+            - name: java-log
+              mountPath: /var/ms/logs/p-invest-service/
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      imagePullSecrets:
+      - name: aliyun-hub
+      volumes:
+      - name: nfs-volume
+        nfs:
+          path: /
+          server: 10.100.20.146
+      - name: java-log
+        hostPath:
+          path: /var/lib/docker/logs/java/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: p-invest-service
+spec:
+  ports:
+    - port: 9031
+      protocol: TCP
+      targetPort: 9031
+  selector:
+    app: p-invest-service
+  type: ClusterIP
+---
+# p-notification-service
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: p-notification-service
+  labels:
+    app: p-notification-service
+  namespace: default
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  selector:
+    matchLabels:
+      app: p-notification-service
+  template:
+    metadata:
+      labels:
+        app: p-notification-service
+    spec:
+      containers:
+        - name: p-notification-service
+          image: yjd-registry.cn-shanghai.cr.aliyuncs.com/java/java-run:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: COMMAND0
+              value: ' '
+            - name: COMMAND1
+              value: 'cp /opt/code/java-jar/p-notification-service-0.0.1-SNAPSHOT.jar /root/p-notification-service-0.0.1-SNAPSHOT.jar'
+            - name: COMMAND2
+              value: 'nohup java -jar -Xms1024m -Xmx4096m  /root/p-notification-service-0.0.1-SNAPSHOT.jar &'
+            - name: TAG
+              value: v20190822 
+          # resources:
+            # requests:
+              # memory: "4Gi"
+              # cpu: "500m"
+            # limits:
+              # memory: "4Gi"
+              # cpu: "1200m"
+          ports:
+            - containerPort: 9061
+          workingDir: "/root/"
+          volumeMounts:
+            - name: nfs-volume
+              mountPath: "/opt/code"
+            - name: java-log
+              mountPath: /var/ms/logs/p-notification-service/
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      imagePullSecrets:
+      - name: aliyun-hub
+      volumes:
+      - name: nfs-volume
+        nfs:
+          path: /
+          server: 10.100.20.146
+      - name: java-log
+        hostPath:
+          path: /var/lib/docker/logs/java/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: p-notification-service
+spec:
+  ports:
+    - port: 9061
+      protocol: TCP
+      targetPort: 9061
+  selector:
+    app: p-notification-service
+  type: ClusterIP
+---
+# p-depository-service
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: p-depository-service
+  labels:
+    app: p-depository-service
+  namespace: default
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  selector:
+    matchLabels:
+      app: p-depository-service
+  template:
+    metadata:
+      labels:
+        app: p-depository-service
+    spec:
+      containers:
+        - name: p-depository-service
+          image: yjd-registry.cn-shanghai.cr.aliyuncs.com/java/java-run:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: COMMAND0
+              value: ' '
+            - name: COMMAND1
+              value: 'cp /opt/code/java-jar/p-depository-service-0.0.1-SNAPSHOT.jar /root/p-depository-service-0.0.1-SNAPSHOT.jar'
+            - name: COMMAND2
+              value: 'nohup java -jar -Xms1024m -Xmx4096m  /root/p-depository-service-0.0.1-SNAPSHOT.jar &'
+            - name: TAG
+              value: v20190822 
+          # resources:
+            # requests:
+              # memory: "4Gi"
+              # cpu: "500m"
+            # limits:
+              # memory: "4Gi"
+              # cpu: "1200m"
+          ports:
+            - containerPort: 9111
+          workingDir: "/root/"
+          volumeMounts:
+            - name: nfs-volume
+              mountPath: "/opt/code"
+            - name: java-log
+              mountPath: /var/ms/logs/p-depository-service/
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      imagePullSecrets:
+      - name: aliyun-hub
+      volumes:
+      - name: nfs-volume
+        nfs:
+          path: /
+          server: 10.100.20.146
+      - name: java-log
+        hostPath:
+          path: /var/lib/docker/logs/java/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: p-depository-service
+spec:
+  ports:
+    - port: 9111
+      protocol: TCP
+      targetPort: 9111
+  selector:
+    app: p-depository-service
+  type: ClusterIP
+---
+# p-core-admin
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: p-core-admin
+  labels:
+    app: p-core-admin
+  namespace: default
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  selector:
+    matchLabels:
+      app: p-core-admin
+  template:
+    metadata:
+      labels:
+        app: p-core-admin
+    spec:
+      containers:
+        - name: p-core-admin
+          image: yjd-registry.cn-shanghai.cr.aliyuncs.com/java/java-run:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: COMMAND0
+              value: ' '
+            - name: COMMAND1
+              value: 'cp /opt/code/java-jar/p-core-admin-0.0.1-SNAPSHOT.jar /root/p-core-admin-0.0.1-SNAPSHOT.jar'
+            - name: COMMAND2
+              value: 'nohup java -jar -Xms1024m -Xmx2048m  /root/p-core-admin-0.0.1-SNAPSHOT.jar &'
+            - name: TAG
+              value: v20190822 
+          # resources:
+            # requests:
+              # memory: "2Gi"
+              # cpu: "500m"
+            # limits:
+              # memory: "2Gi"
+              # cpu: "1000m"
+          ports:
+            - containerPort: 9003
+          workingDir: "/root/"
+          volumeMounts:
+            - name: nfs-volume
+              mountPath: "/opt/code"
+            - name: java-log
+              mountPath: /var/ms/logs/p-core-admin/
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      imagePullSecrets:
+      - name: aliyun-hub
+      volumes:
+      - name: nfs-volume
+        nfs:
+          path: /
+          server: 10.100.20.146
+      - name: java-log
+        hostPath:
+          path: /var/lib/docker/logs/java/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: p-core-admin
+spec:
+  ports:
+    - port: 9003
+      protocol: TCP
+      targetPort: 9003
+  selector:
+    app: p-core-admin
+  type: ClusterIP
+---
+# p-api
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: p-api
+  labels:
+    app: p-api
+  namespace: default
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  selector:
+    matchLabels:
+      app: p-api
+  template:
+    metadata:
+      labels:
+        app: p-api
+    spec:
+      containers:
+        - name: p-api
+          image: yjd-registry.cn-shanghai.cr.aliyuncs.com/java/java-run:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: httpservername
+              valueFrom:
+                configMapKeyRef:
+                  key: httpservername
+                  name: httpservername
+            - name: COMMAND0
+              value: ' '
+            - name: COMMAND1
+              value: 'cp /opt/code/java-jar/p-api-0.0.1-SNAPSHOT.jar /root/p-api-0.0.1-SNAPSHOT.jar'
+            - name: COMMAND2
+              value: 'nohup java -jar -Xms1024m -Xmx6144m  /root/p-api-0.0.1-SNAPSHOT.jar &'
+            - name: TAG
+              value: v20190822 
+          # resources:
+            # requests:
+              # memory: "6Gi"
+              # cpu: "500m"
+            # limits:
+              # memory: "7Gi"
+              # cpu: "1200m"
+          ports:
+            - containerPort: 9081
+          workingDir: "/root/"
+          volumeMounts:
+            - name: nfs-volume
+              mountPath: "/opt/code"
+            - name: java-log
+              mountPath: /var/ms/logs/p-api/
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      imagePullSecrets:
+      - name: aliyun-hub
+      volumes:
+      - name: nfs-volume
+        nfs:
+          path: /
+          server: 10.100.20.146
+      - name: java-log
+        hostPath:
+          path: /var/lib/docker/logs/java/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: p-api
+spec:
+  ports:
+    - port: 9081
+      protocol: TCP
+      targetPort: 9081
+  selector:
+    app: p-api
+  type: ClusterIP

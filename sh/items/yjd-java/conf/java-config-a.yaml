@@ -1,0 +1,164 @@
+# p-cloud-discovery
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: p-cloud-discovery
+  labels:
+    app: p-cloud-discovery
+  namespace: default
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  selector:
+    matchLabels:
+      app: p-cloud-discovery
+  template:
+    metadata:
+      labels:
+        app: p-cloud-discovery
+    spec:
+      containers:
+        - name: p-cloud-discovery
+          image: yjd-registry-vpc.cn-shanghai.cr.aliyuncs.com/java/java-run:latest
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: pvc-oss-p-java-jar
+              mountPath: "/www"
+          livenessProbe:
+            exec:
+              command:
+              - sh
+              - -c
+              - cd /www
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          env:
+            - name: COMMAND0
+              value: ' '
+            - name: COMMAND1
+              value: 'cp /www/jar/p-java-common/p-cloud-discovery-0.0.1-SNAPSHOT.jar /root/p-cloud-discovery-0.0.1-SNAPSHOT.jar'
+            - name: COMMAND2
+              value: 'nohup java -jar -Xms1024m -Xmx2048m p-cloud-discovery-0.0.1-SNAPSHOT.jar &'
+           # - name: TAG 
+           #   value: 'p-cloud'
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          ports:
+            - containerPort: 7001
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always           
+      imagePullSecrets:
+        - name: aliyun-hub
+      volumes:
+        - name: pvc-oss-p-java-jar
+          persistentVolumeClaim:
+            claimName: pvc-oss-p-java-jar
+---
+# p-cloud-discovery
+apiVersion: v1
+kind: Service
+metadata:
+  name: p-cloud-discovery
+spec:
+  ports:
+    - port: 7001
+      protocol: TCP
+      targetPort: 7001
+  selector:
+    app: p-cloud-discovery
+  type: ClusterIP
+---
+# p-config-service
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: p-config-service
+  labels:
+    app: p-config-service
+  namespace: default
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+    # minReadySeconds: 20
+    # strategy:
+      # rollingUpdate:
+        # maxSurge: 1
+        # maxUnavailable: 0
+      # type: RollingUpdate
+  selector:
+    matchLabels:
+      app: p-config-service
+  template:
+    metadata:
+      labels:
+        app: p-config-service
+    spec:
+      containers:
+        - name: p-config-service
+          image: yjd-registry-vpc.cn-shanghai.cr.aliyuncs.com/java/java-run:latest
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: pvc-oss-p-java-jar
+              mountPath: "/www"
+            - name: p-config-service-conf-volume
+              mountPath: "/data"
+              readOnly: true
+          livenessProbe:
+            exec:
+              command:
+              - sh
+              - -c
+              - cd /www
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          env:
+            - name: COMMAND0
+              value: ' '
+            - name: COMMAND1
+              value: 'cp /www/jar/p-java-common/p-config-service-0.0.1-SNAPSHOT.jar /root/p-config-service-0.0.1-SNAPSHOT.jar'
+            - name: COMMAND2
+              value: 'nohup java -jar -Xms1024m -Xmx2048m p-config-service-0.0.1-SNAPSHOT.jar &'
+            - name: TAG
+              value: 'v20190729'
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          ports:
+            - containerPort: 9121
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always           
+      imagePullSecrets:
+        - name: aliyun-hub
+      volumes:
+        - name: pvc-oss-p-java-jar
+          persistentVolumeClaim:
+            claimName: pvc-oss-p-java-jar
+        - name: p-config-service-conf-volume
+          secret:
+            secretName: p-config-service-conf
+---
+# p-config-service
+apiVersion: v1
+kind: Service
+metadata:
+  name: p-config-service
+spec:
+  ports:
+    - port: 9121
+      protocol: TCP
+      targetPort: 9121
+  selector:
+    app: p-config-service
+  type: ClusterIP
+
